@@ -2,23 +2,18 @@
 
 function join_by { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
 
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Error: docker-compose is not installed.' >&2
-  exit 1
-fi
-
-DOMAINS=(example.com www.example.com)
+DOMAINS=(kf-rasp.kobo.local kc-rasp.kobo.local ee-rasp.kobo.local)
 DOMAINS_CSV=$(join_by , "${DOMAINS[@]}")
 RSA_KEY_SIZE=4096
 DATA_PATH="./data/certbot"
 EMAIL="" # Adding a valid address is strongly recommended
 STAGING=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 MKDIR_CMD=$(which mkdir)
-DOCKER_COMPOSE_CMD=$(which docker-compose)
+DOCKER_COMPOSE_CMD="$(which docker-compose)"
 CURL_CMD=$(which curl)
 
 
-if [ -d "$DATA_PATH" ]; then
+if [ -d "$DATA_PATH/conf/live/$DOMAINS" ]; then
   read -p "Existing data found for $DOMAINS_CSV. Continue and replace existing certificate? (y/N) " decision
   if [ "$decision" != "Y" ] && [ "$decision" != "y" ]; then
     exit
@@ -45,7 +40,7 @@ echo
 
 
 echo "### Starting nginx ..."
-$DOCKER_COMPOSE_CMD up --force-recreate -d nginx
+$DOCKER_COMPOSE_CMD up --force-recreate -d nginx_ssl_proxy
 echo
 
 echo "### Deleting dummy certificate for ${DOMAINS_CSV} ..."
@@ -83,4 +78,4 @@ $DOCKER_COMPOSE_CMD run --rm --entrypoint "\
 echo
 
 echo "### Reloading nginx ..."
-$DOCKER_COMPOSE_CMD exec nginx nginx -s reload
+$DOCKER_COMPOSE_CMD exec nginx_ssl_proxy nginx -s reload
